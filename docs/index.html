@@ -1,0 +1,1386 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2f5e1e">
+<meta name="description" content="דבורה אוספת אבקה בגינה, בונה רצפי צבעים ובורחת מצרעות. 10 שלבים, עובד גם בלי אינטרנט.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="באזז">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>באזז בגינה</title>
+<style>
+  @font-face { font-family: 'Fredoka'; font-style: normal; font-weight: 300 700; font-display: swap;
+    src: url(fonts/fredoka-hebrew.woff2) format('woff2'); unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+  @font-face { font-family: 'Fredoka'; font-style: normal; font-weight: 300 700; font-display: swap;
+    src: url(fonts/fredoka-latin-ext.woff2) format('woff2'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  @font-face { font-family: 'Fredoka'; font-style: normal; font-weight: 300 700; font-display: swap;
+    src: url(fonts/fredoka-latin.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+</style>
+</head>
+<body>
+<style>
+  /* Layout: full-bleed mowed lawn on canvas, honey HUD strip on top, sticker-style honey cards for menus */
+  :root {
+    --lawn: #5d9b3a;
+    --lawn-deep: #2f5e1e;
+    --honey: #ffc62e;
+    --honey-deep: #d98a0f;
+    --ink: #33200c;
+    --ink-soft: rgba(51, 32, 12, 0.62);
+    --chip: rgba(40, 24, 8, 0.7);
+    --chip-fg: #fff3cf;
+    --pink: #ff6fa8;
+    --violet: #9a7cff;
+    --blue: #3fb0f0;
+    --gold: #ffd23a;
+    --display: "Fredoka", "Varela Round", "Arial Rounded MT Bold", system-ui, sans-serif;
+    color-scheme: light;
+  }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
+  body {
+    background: var(--lawn-deep);
+    color: var(--ink);
+    font-family: var(--display);
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #app { position: fixed; inset: 0; touch-action: none; overflow: hidden; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #dusk { position: absolute; inset: 0; background: #1c1650; opacity: 0; pointer-events: none; }
+
+  /* HUD */
+  .hud {
+    position: absolute; top: 0; left: 0; right: 0;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px 0;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    pointer-events: none;
+  }
+  .hud-row { width: 100%; max-width: 560px; display: flex; align-items: center; gap: 8px; }
+  .chip {
+    background: var(--chip); color: var(--chip-fg);
+    border-radius: 999px; padding: 6px 12px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .hearts { gap: 3px; padding-inline: 10px; }
+  .heart { width: 20px; height: 20px; display: block; transition: transform .25s, opacity .25s; }
+  .heart path { fill: #ff5a6e; stroke: #fff3cf; stroke-width: 1.5; }
+  .heart.lost { opacity: .3; transform: scale(.8); }
+  .heart.lost path { fill: transparent; }
+  .score { flex: 1; justify-content: center; min-width: 0; }
+  .score b { font-size: 24px; font-weight: 700; color: var(--honey); font-variant-numeric: tabular-nums; line-height: 1; }
+  .score span { font-size: 13px; opacity: .85; }
+  .icon-btn {
+    pointer-events: auto; border: 0; cursor: pointer;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--chip); color: var(--chip-fg);
+    display: grid; place-items: center; padding: 0;
+  }
+  .icon-btn svg { width: 20px; height: 20px; }
+  .icon-btn:focus-visible, .btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  .pouch { gap: 5px; padding: 6px 12px; }
+  .pouch .lbl { font-size: 12px; opacity: .8; margin-inline-end: 2px; }
+  .slot {
+    width: 20px; height: 22px;
+    clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+    background: rgba(255, 243, 207, .18);
+    transition: transform .2s;
+  }
+  .slot.on { background: var(--c); transform: scale(1.12); }
+  .pending { min-width: 3.2em; font-size: 15px; font-weight: 600; color: var(--honey); font-variant-numeric: tabular-nums; text-align: start; }
+  .hud.hidden-play .hud-row, .hud.hidden-play .pouch { visibility: hidden; }
+  #slots { display: grid; grid-template-columns: repeat(6, 20px); gap: 4px 5px; }
+  .lvlrow { padding: 5px 12px; gap: 10px; }
+  .lvl { font-size: 14px; white-space: nowrap; }
+  .lvl b { color: var(--honey); font-size: 18px; font-variant-numeric: tabular-nums; }
+  .lvlbar { flex: 1; min-width: 0; height: 6px; border-radius: 99px; background: rgba(255, 243, 207, .18); overflow: hidden; }
+  .lvlbar i { display: block; height: 100%; width: 0; background: var(--honey); border-radius: inherit; transition: width .4s; }
+  .lvlbar.ready i { background: #ff5a3c; animation: pulse .5s ease-in-out infinite alternate; }
+  @keyframes pulse { from { opacity: .5; } to { opacity: 1; } }
+  .lvlnext { font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; opacity: .9; }
+  .banner {
+    position: absolute; left: 16px; right: 16px; top: 34%;
+    display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+    pointer-events: none; color: #fff8e0;
+    text-shadow: 0 2px 0 rgba(40, 22, 6, .9), 0 0 18px rgba(40, 22, 6, .55);
+    animation: bannerIn 3.4s ease both;
+  }
+  .banner small { font-size: 18px; font-weight: 600; }
+  .banner b { font-size: 44px; line-height: 1; color: var(--honey); text-wrap: balance; }
+  .banner span { font-size: 17px; max-width: 30ch; line-height: 1.35; }
+  @keyframes bannerIn { 0% { opacity: 0; transform: scale(.7); } 10% { opacity: 1; transform: scale(1.06); } 18% { transform: scale(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* Overlays */
+  .overlay {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
+    background: rgba(22, 40, 12, .38);
+    overflow-y: auto;
+  }
+  .card {
+    width: 100%; max-width: 370px; box-sizing: border-box;
+    background: var(--honey);
+    border-radius: 30px;
+    padding: 22px 22px 20px;
+    box-shadow: 0 8px 0 var(--honey-deep), 0 22px 44px rgba(0, 0, 0, .3);
+    position: relative;
+    animation: pop .45s cubic-bezier(.2, 1.4, .4, 1) both;
+  }
+  .card::before {
+    /* honeycomb watermark */
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background-image: radial-gradient(circle at 50% 50%, rgba(255,255,255,.22) 0 9px, transparent 10px);
+    background-size: 26px 23px;
+    -webkit-mask-image: linear-gradient(to bottom, #000, transparent 45%);
+    mask-image: linear-gradient(to bottom, #000, transparent 45%);
+  }
+  @keyframes pop { from { transform: scale(.85) translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .card > * { position: relative; }
+  .eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .04em; color: var(--ink-soft); margin: 0; }
+  h1 { font-size: 64px; line-height: .95; margin: 4px 0 6px; font-weight: 700; text-wrap: balance; }
+  h1 .z { display: inline-block; animation: buzz 1.6s ease-in-out infinite; }
+  @keyframes buzz { 0%, 100% { transform: translateX(0) rotate(0); } 25% { transform: translateX(-2px) rotate(-4deg); } 75% { transform: translateX(2px) rotate(4deg); } }
+  h2 { font-size: 34px; line-height: 1.05; margin: 2px 0 10px; font-weight: 700; text-wrap: balance; }
+  .lede { font-size: 17px; margin: 0 0 16px; color: var(--ink); }
+  .steps { list-style: none; padding: 0; margin: 0 0 18px; display: grid; gap: 10px; }
+  .steps li { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: center; font-size: 15.5px; line-height: 1.35; }
+  .steps li > span { min-width: 0; }
+  .ico { width: 34px; height: 34px; }
+  .swatches { display: inline-flex; gap: 3px; vertical-align: middle; margin-inline: 2px; }
+  .swatches i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+  .btn {
+    width: 100%; border: 0; cursor: pointer;
+    font: 700 22px/1 var(--display);
+    background: var(--ink); color: var(--honey);
+    padding: 16px 18px; border-radius: 20px;
+    box-shadow: 0 5px 0 #170d03;
+    transition: transform .08s, box-shadow .08s;
+  }
+  .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #170d03; }
+  .btn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 2.5px var(--ink); font-size: 18px; padding: 12px; margin-top: 10px; }
+  .btn.ghost:active { transform: translateY(2px); }
+  .eco-btn { font-size: 15px; padding: 10px; }
+  .best { margin: 12px 0 0; text-align: center; font-size: 14px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .big-score { display: flex; align-items: baseline; gap: 8px; margin: 0 0 6px; }
+  .big-score b { font-size: 58px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .big-score span { font-size: 18px; font-weight: 500; }
+  .rank {
+    display: inline-block; background: var(--ink); color: var(--honey);
+    font-weight: 600; font-size: 15px; padding: 5px 12px; border-radius: 999px; margin-bottom: 12px;
+  }
+  .newbest { display: inline-block; margin-inline-start: 6px; font-weight: 700; color: #b0420f; font-size: 15px; }
+  .fact {
+    background: rgba(255, 255, 255, .45); border-radius: 16px;
+    padding: 10px 14px; margin: 0 0 16px; font-size: 15px; line-height: 1.4;
+  }
+  .fact strong { display: block; font-size: 12px; letter-spacing: .04em; color: var(--ink-soft); margin-bottom: 2px; font-weight: 600; }
+  .stats { display: flex; gap: 8px; margin: 0 0 14px; flex-wrap: wrap; }
+  .stats div { flex: 1; min-width: 90px; background: rgba(51, 32, 12, .1); border-radius: 14px; padding: 8px 10px; }
+  .stats b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .stats span { font-size: 12.5px; color: var(--ink-soft); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card, h1 .z, .banner { animation: none; }
+  }
+</style>
+
+<div id="app" dir="rtl">
+  <canvas id="lawn" aria-hidden="true"></canvas>
+  <canvas id="c" aria-label="גינה עם דבורה, פרחים וצרעות"></canvas>
+  <div id="dusk"></div>
+
+  <div class="hud hidden-play" id="hud">
+    <div class="hud-row">
+      <div class="chip hearts" id="hearts" aria-label="לבבות"></div>
+      <div class="chip score"><b id="score">0</b><span>גרם דבש</span></div>
+      <button class="icon-btn" id="muteBtn" aria-label="השתקה" type="button"></button>
+      <button class="icon-btn" id="pauseBtn" aria-label="השהיה" type="button">
+        <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg>
+      </button>
+    </div>
+    <div class="hud-row chip lvlrow">
+      <span class="lvl">שלב <b id="lvl">1</b></span>
+      <div class="lvlbar" id="lvlBar"><i id="lvlFill"></i></div>
+      <span class="lvlnext" id="lvlNext"></span>
+    </div>
+    <div class="chip pouch" id="pouchChip">
+      <span class="lbl">שק אבקה</span>
+      <div id="slots"></div>
+      <span class="pending" id="pending"></span>
+    </div>
+  </div>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <div class="overlay" id="menu">
+    <div class="card">
+      <p class="eyebrow">משחק גינה לטלפון</p>
+      <h1>באז<span class="z">ז</span>!</h1>
+      <p class="lede">אתם דבורה אחת קטנה. הגינה מלאה פרחים, והצרעות כבר בדרך.</p>
+      <ul class="steps">
+        <li>
+          <svg class="ico" viewBox="0 0 34 34"><circle cx="17" cy="17" r="16" fill="#33200c"/><path d="M13 23v-8.5a2 2 0 0 1 4 0V19m0-2.5a2 2 0 0 1 4 0V19m0-1.5a2 2 0 0 1 3.5-1.3V21a6 6 0 0 1-6 6h-1.2A5.5 5.5 0 0 1 13 23Z" fill="none" stroke="#ffc62e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 9.5 17 7l2 2.5" fill="none" stroke="#ffc62e" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span>גררו אצבע <b>בכל מקום</b> על המסך. הדבורה זזה בעקבותיה.</span>
+        </li>
+        <li>
+          <svg class="ico" viewBox="0 0 34 34"><circle cx="17" cy="17" r="16" fill="#33200c"/><g fill="#ff6fa8"><circle cx="17" cy="10.5" r="4.2"/><circle cx="23.2" cy="15" r="4.2"/><circle cx="20.8" cy="22.3" r="4.2"/><circle cx="13.2" cy="22.3" r="4.2"/><circle cx="10.8" cy="15" r="4.2"/></g><circle cx="17" cy="17" r="3.6" fill="#ffde59"/></svg>
+          <span>עופו דרך פרחים לאסוף אבקה. אותו צבע ברצף<span class="swatches"><i style="background:var(--pink)"></i><i style="background:var(--pink)"></i><i style="background:var(--pink)"></i></span>שווה הרבה יותר דבש.</span>
+        </li>
+        <li>
+          <svg class="ico" viewBox="0 0 34 34"><circle cx="17" cy="17" r="16" fill="#33200c"/><path d="M17 8.5l6 3.5v7l-6 3.5-6-3.5v-7z" fill="#ffc62e" stroke="#d98a0f" stroke-width="1.4"/><path d="M11 19l-4.5 2.6v5.2L11 29.4l4.5-2.6v-5.2z M23 19l-4.5 2.6v5.2l4.5 2.6 4.5-2.6v-5.2z" fill="#ffc62e" opacity=".7"/></svg>
+          <span>חזרו לכוורת כדי להפוך אבקה לדבש. צרעה שתופסת אתכם מפילה את כל השק.</span>
+        </li>
+        <li>
+          <svg class="ico" viewBox="0 0 34 34"><circle cx="17" cy="17" r="16" fill="#33200c"/><g fill="#ff3b30"><circle cx="17" cy="9.5" r="4"/><circle cx="24" cy="14" r="4"/><circle cx="22" cy="22.5" r="4"/><circle cx="12" cy="22.5" r="4"/><circle cx="10" cy="14" r="4"/></g><circle cx="17" cy="17" r="4.6" fill="#1c1010"/><path d="M19.5 13.5q2-2.5 3.5-3.5" stroke="#c9a46a" stroke-width="1.4" fill="none"/><circle cx="23.3" cy="9.8" r="1.8" fill="#ffe066"/></svg>
+          <span>ב-5,000 גרם פורח <b>פרח פצצה</b>. אספו אותו כדי לפוצץ את כל הצרעות ולעלות שלב. יש 10 שלבים.</span>
+        </li>
+        <li>
+          <svg class="ico" viewBox="0 0 34 34"><circle cx="17" cy="17" r="16" fill="#33200c"/><circle cx="17" cy="17" r="9.5" fill="none" stroke="rgba(255,243,207,.25)" stroke-width="3"/><path d="M17 7.5a9.5 9.5 0 1 1-9.2 7.2" fill="none" stroke="#ffc62e" stroke-width="3" stroke-linecap="round"/><path d="M17 12v5l3 2" stroke="#fff3cf" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+          <span>בכוורת הצרעות לא נוגעות בכם, אבל רק <b>10 שניות בכל המשחק</b>. הטבעת סביב הכוורת מראה כמה נשאר.</span>
+        </li>
+      </ul>
+      <button class="btn" id="startBtn" type="button">יאללה, לעוף</button>
+      <button class="btn ghost eco-btn" type="button" aria-pressed="true"></button>
+      <p class="best" id="bestMenu"></p>
+    </div>
+  </div>
+
+  <div class="overlay" id="pauseOv" hidden>
+    <div class="card">
+      <p class="eyebrow">הפסקת צוף</p>
+      <h2>הדבורה נחה על עלה</h2>
+      <button class="btn" id="resumeBtn" type="button">חזרה לגינה</button>
+      <button class="btn ghost eco-btn" type="button" aria-pressed="true"></button>
+      <button class="btn ghost" id="quitBtn" type="button">לתפריט</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="over" hidden>
+    <div class="card">
+      <p class="eyebrow">הכוורת נסגרת להיום</p>
+      <div class="big-score"><b id="finalScore">0</b><span>גרם דבש</span></div>
+      <span class="rank" id="rank"></span><span class="newbest" id="newBest" hidden>שיא חדש!</span>
+      <div class="stats">
+        <div><b id="stFlowers">0</b><span>פרחים שבוקרו</span></div>
+        <div><b id="stChain">0</b><span>הרצף הכי ארוך</span></div>
+        <div><b id="stTime">0:00</b><span>זמן באוויר</span></div>
+      </div>
+      <p class="fact"><strong>ידעתם?</strong><span id="fact"></span></p>
+      <button class="btn" id="againBtn" type="button">עוד סיבוב</button>
+      <p class="best" id="bestOver"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const TAU = Math.PI * 2;
+  const COL = { pink: '#ff6fa8', violet: '#9a7cff', blue: '#3fb0f0', orange: '#ff8a2a', white: '#f4f1ff', gold: '#ffd23a', bomb: '#ff3b30' };
+  const KINDS = ['pink', 'violet', 'blue', 'orange', 'white'];
+  const SHELTER_MAX = 10; // seconds of hive protection for the whole game
+  // at: score that makes the bomb flower bloom for this level. speed: wasp speed [start, cap] in px/s.
+  // max / every: most wasps on screen and seconds between new arrivals.
+  const LEVELS = [
+    { at: 0,     speed: [78, 150],  max: 5,  every: 22, colors: 3, pouch: 6,  webs: 0, hornets: 0, title: 'הגינה מתעוררת', note: '' },
+    { at: 5000,  speed: [108, 192], max: 6,  every: 14, colors: 3, pouch: 6,  webs: 0, hornets: 0, title: 'הצרעות מתעצבנות', note: 'הצרעות מהירות יותר ומגיעות בקצב גבוה יותר.' },
+    { at: 8000,  speed: [114, 198], max: 6,  every: 13, colors: 4, pouch: 12, webs: 0, hornets: 0, title: 'פריחה כתומה', note: 'צבע חדש: כתום. לשק נוספה שורה, עכשיו יש בו 12 מקומות.' },
+    { at: 12000, speed: [120, 205], max: 7,  every: 12, colors: 4, pouch: 12, webs: 2, hornets: 0, title: 'קורי עכביש', note: 'קורים בגינה מאטים את הדבורה. עקפו אותם.' },
+    { at: 16500, speed: [126, 212], max: 7,  every: 11, colors: 5, pouch: 12, webs: 2, hornets: 0, title: 'מרגניות', note: 'צבע חדש: לבן. חמישה צבעים, רצפים ארוכים שווים יותר.' },
+    { at: 21500, speed: [132, 220], max: 7,  every: 10, colors: 5, pouch: 12, webs: 3, hornets: 1, title: 'הצרעה המזרחית', note: 'צרעה גדולה שמסתערת בקו ישר. כשהיא עוצרת ומסמנת קו, זוזו הצידה.' },
+    { at: 27000, speed: [138, 228], max: 8,  every: 9,  colors: 5, pouch: 12, webs: 3, hornets: 1, title: 'שרב', note: 'חם בגינה. הפרחים נובלים מהר יותר.', wilt: 0.7 },
+    { at: 33000, speed: [144, 236], max: 8,  every: 8,  colors: 5, pouch: 12, webs: 3, hornets: 1, title: 'לילה', note: 'החושך יורד על הגינה.', wilt: 0.7, night: true },
+    { at: 40000, speed: [152, 245], max: 9,  every: 7,  colors: 5, pouch: 12, webs: 3, hornets: 2, title: 'שתי מזרחיות', note: 'שתי צרעות מזרחיות בגינה. שימו עין על שתיהן.', wilt: 0.7, night: true },
+    { at: 48000, speed: [160, 258], max: 10, every: 6,  colors: 5, pouch: 12, webs: 3, hornets: 2, title: 'גן המלכה', note: 'השלב האחרון. יותר פרחי זהב, הכי הרבה צרעות.', wilt: 0.7, gold: 0.14 }
+  ];
+  const SENS = 1.3;
+  let eco = true; // battery saver: 30fps and lower canvas resolution
+  try { eco = localStorage.getItem('buzz-eco') !== '0'; } catch (e) {}
+  const FACTS = [
+    'דבורת עבודה מייצרת בכל חייה בערך 1/12 כפית דבש.',
+    'בכל יציאה מהכוורת דבורה מבקרת בין 50 ל-100 פרחים.',
+    'הזמזום מגיע מהכנפיים: הן מכות יותר מ-200 פעמים בשנייה.',
+    'תאי חלת הדבש משושים, כי זו הצורה שמחזיקה הכי הרבה דבש עם הכי מעט שעווה.',
+    'דבורים מתקשרות בריקוד: "ריקוד הכשכוש" מסמן לחברות לכוורת כיוון ומרחק לפרחים.',
+    'בשביל קילו דבש הדבורים עפות מרחק ששווה בערך לשלוש הקפות של כדור הארץ.',
+    'דבורים רואות אור אולטרה סגול, ולהרבה פרחים יש "מסלולי נחיתה" שרק הן רואות.',
+    'הצרעה המזרחית חיה גם בישראל, וצדה דבורים ממש ליד הכניסה לכוורת.'
+  ];
+
+  const app = document.getElementById('app');
+  const cv = document.getElementById('c');
+  const lawn = document.getElementById('lawn');
+  const duskEl = document.getElementById('dusk');
+  let ctx = cv.getContext('2d');
+  const mainCtx = ctx;
+  const $ = id => document.getElementById(id);
+  const hud = $('hud'), heartsEl = $('hearts'), scoreEl = $('score'), slotsEl = $('slots'), pendingEl = $('pending');
+  const menu = $('menu'), over = $('over'), pauseOv = $('pauseOv'), bannerEl = $('banner');
+  const lvlEl = $('lvl'), lvlBar = $('lvlBar'), lvlFill = $('lvlFill'), lvlNext = $('lvlNext'), pouchChip = $('pouchChip');
+  const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let W = 0, H = 0, dpr = 1, bg = null;
+  let hive = { x: 0, y: 0, r: 44, glow: 0 };
+  let state = 'menu';
+  let bee, flowers, wasps, parts, floats, pouch, chain, pending, score, shownScore, hearts, elapsed, shake, flowerTimer, nextHeartAt, fullMsgCd, stats, overTimer;
+  let level = 1, levelTime = 0, shelter = SHELTER_MAX, hiveStay = 0, webs = [], shock = null, topSafeVal = 112, bannerT = 0;
+  let best = 0, bestLevel = 1;
+  try { best = +localStorage.getItem('buzz-best') || 0; bestLevel = +localStorage.getItem('buzz-best-level') || 1; } catch (e) {}
+  const LV = () => LEVELS[level - 1];
+  const pouchMax = () => LV().pouch;
+
+  const fontStack = '"Fredoka", "Varela Round", system-ui, sans-serif';
+  // ---------- helpers ----------
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const easeOutBack = t => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
+  const angTo = (a, b, t) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * t;
+  const fmt = n => Math.round(n).toLocaleString('he-IL');
+  const topSafe = () => topSafeVal;
+  const buzzVibe = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+
+  // ---------- audio ----------
+  let actx = null, muted = false;
+  try { muted = localStorage.getItem('buzz-muted') === '1'; } catch (e) {}
+  function ensureAudio() {
+    if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; } }
+    if (actx && actx.state === 'suspended') actx.resume().catch(() => {});
+  }
+  let audioNap = 0;
+  function napAudio() {
+    clearTimeout(audioNap);
+    audioNap = setTimeout(() => { if (actx && state !== 'play' && actx.state === 'running') actx.suspend().catch(() => {}); }, 2500);
+  }
+  function tone(freq, dur, type = 'sine', vol = 0.12, slide = 0, delay = 0) {
+    if (muted || !actx) return;
+    const t = actx.currentTime + delay;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(freq * slide, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(actx.destination);
+    o.start(t); o.stop(t + dur + 0.03);
+  }
+  const SCALE = [523, 587, 659, 784, 880, 1047, 1175, 1319];
+  function setMuteIcon() {
+    $('muteBtn').innerHTML = muted
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h3l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 9l5 6M21 9l-5 6"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h3l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>';
+    $('muteBtn').setAttribute('aria-label', muted ? 'הפעלת צליל' : 'השתקה');
+  }
+
+  // ---------- layout ----------
+  function resize() {
+    W = app.clientWidth; H = app.clientHeight;
+    dpr = Math.min(window.devicePixelRatio || 1, eco ? 1.5 : 2);
+    spriteCache.clear();
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    hive.x = W / 2; hive.y = H - 84;
+    buildBg();
+    if (bee) {
+      bee.tx = clamp(bee.tx, 16, W - 16); bee.ty = clamp(bee.ty, 90, H - 16);
+      flowers.forEach(f => { f.x = clamp(f.x, 26, W - 26); f.y = clamp(f.y, topSafe(), H - 30); });
+    }
+  }
+
+  function buildBg() {
+    bg = lawn;
+    bg.width = cv.width; bg.height = cv.height;
+    const g = bg.getContext('2d');
+    g.scale(dpr, dpr);
+    const grd = g.createLinearGradient(0, 0, 0, H);
+    grd.addColorStop(0, '#78b948'); grd.addColorStop(1, '#4e8c31');
+    g.fillStyle = grd; g.fillRect(0, 0, W, H);
+    // mowing stripes, the mark of a well kept lawn
+    const stripe = 46;
+    g.save(); g.translate(W / 2, H / 2); g.rotate(-0.5);
+    const span = Math.hypot(W, H);
+    for (let x = -span; x < span; x += stripe * 2) {
+      g.fillStyle = 'rgba(255,255,220,0.055)';
+      g.fillRect(x, -span, stripe, span * 2);
+    }
+    g.restore();
+    // soft patches
+    for (let i = 0; i < 28; i++) {
+      const x = Math.random() * W, y = Math.random() * H, r = rand(40, 130);
+      const rg = g.createRadialGradient(x, y, 0, x, y, r);
+      const dark = Math.random() < 0.55;
+      rg.addColorStop(0, dark ? 'rgba(30,70,15,0.16)' : 'rgba(200,240,140,0.10)');
+      rg.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = rg; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+    }
+    // grass tufts
+    const tufts = Math.round(W * H / 700);
+    g.lineCap = 'round';
+    for (let i = 0; i < tufts; i++) {
+      const x = Math.random() * W, y = Math.random() * H;
+      const shade = Math.random();
+      g.strokeStyle = shade < 0.5 ? 'rgba(40,90,20,0.35)' : 'rgba(170,220,110,0.30)';
+      g.lineWidth = rand(1, 1.8);
+      g.beginPath();
+      for (let b = 0; b < 3; b++) {
+        const a = -Math.PI / 2 + rand(-0.7, 0.7), l = rand(4, 9);
+        g.moveTo(x + b * 1.5, y); g.lineTo(x + b * 1.5 + Math.cos(a) * l, y + Math.sin(a) * l);
+      }
+      g.stroke();
+    }
+    // tiny clover blossoms and pebbles
+    for (let i = 0; i < Math.round(W * H / 14000); i++) {
+      const x = Math.random() * W, y = Math.random() * H;
+      if (Math.random() < 0.6) {
+        g.fillStyle = 'rgba(255,255,255,0.75)';
+        for (let k = 0; k < 5; k++) { const a = k * TAU / 5; g.beginPath(); g.arc(x + Math.cos(a) * 2.2, y + Math.sin(a) * 2.2, 1.6, 0, TAU); g.fill(); }
+        g.fillStyle = '#ffe066'; g.beginPath(); g.arc(x, y, 1.3, 0, TAU); g.fill();
+      } else {
+        g.fillStyle = 'rgba(120,110,95,0.45)'; g.beginPath(); g.ellipse(x, y, rand(2, 4), rand(1.5, 3), rand(0, 3), 0, TAU); g.fill();
+      }
+    }
+    // worn dirt patch around the hive
+    const hg = g.createRadialGradient(hive.x, hive.y + 6, 10, hive.x, hive.y + 6, 80);
+    hg.addColorStop(0, 'rgba(120,85,40,0.55)'); hg.addColorStop(0.7, 'rgba(120,85,40,0.2)'); hg.addColorStop(1, 'rgba(120,85,40,0)');
+    g.fillStyle = hg; g.beginPath(); g.ellipse(hive.x, hive.y + 6, 84, 64, 0, 0, TAU); g.fill();
+  }
+
+  // ---------- game setup ----------
+  function flowerTarget() { return clamp(Math.round(W * H / 40000), 6, 11) + (LV().colors - 3); }
+
+  function spawnFlower(instant, bomb) {
+    for (let tries = 0; tries < 30; tries++) {
+      const x = rand(28, W - 28), y = rand(topSafe(), H - 34);
+      const p = { x, y };
+      if (dist(p, hive) < hive.r + 50) continue;
+      if (bee && dist(p, bee) < 60) continue;
+      if (flowers.some(f => dist(f, p) < 58)) continue;
+      if (bomb && dist(p, bee) < 160) continue;
+      const L = LV();
+      const gold = !instant && !bomb && Math.random() < (L.gold || 0.07);
+      const wilt = L.wilt || 1;
+      flowers.push({
+        x, y,
+        kind: bomb ? 'bomb' : gold ? 'gold' : KINDS[(Math.random() * L.colors) | 0],
+        scale: bomb ? 1.2 : rand(0.92, 1.15),
+        rot: rand(0, TAU), seed: rand(0, 100),
+        age: instant ? rand(0.5, 2) : 0,
+        life: bomb ? Infinity : (gold ? rand(6, 8) : rand(11, 17)) * wilt,
+        taken: false, tk: 0, dead: false
+      });
+      return true;
+    }
+    return false;
+  }
+
+  function setupWebs() {
+    webs = [];
+    for (let i = 0; i < LV().webs; i++) {
+      for (let tries = 0; tries < 40; tries++) {
+        const p = { x: rand(50, W - 50), y: rand(topSafe() + 40, H - 170), r: rand(36, 46), rot: rand(0, TAU) };
+        if (dist(p, hive) < hive.r + 90 || dist(p, bee) < 100 || webs.some(w => dist(w, p) < 130)) continue;
+        webs.push(p); break;
+      }
+    }
+  }
+
+  function reset() {
+    bee = { x: W / 2, y: H * 0.58, tx: W / 2, ty: H * 0.58, ang: -Math.PI / 2, inv: 0, hist: [] };
+    flowers = []; wasps = []; parts = []; floats = [];
+    pouch = []; chain = { color: null, len: 0 }; pending = 0;
+    score = 0; shownScore = 0; hearts = 3; elapsed = 0; shake = 0;
+    flowerTimer = 0; nextHeartAt = 1000; fullMsgCd = 0;
+    stats = { flowers: 0, chain: 0 };
+    level = 1; levelTime = 0; shelter = SHELTER_MAX; hiveStay = 0; webs = []; shock = null;
+    for (let i = 0; i < flowerTarget(); i++) spawnFlower(true);
+    renderHud();
+  }
+
+  function spawnWasp(hornet) {
+    const side = (Math.random() * 3) | 0; // 0 right, 1 left, 2 top
+    let x, y, mx, my;
+    if (side === 0) { y = rand(topSafe() + 20, H - 180); x = W + 24; mx = W - 20; my = y; }
+    else if (side === 1) { y = rand(topSafe() + 20, H - 180); x = -24; mx = 20; my = y; }
+    else { x = rand(40, W - 40); y = 70; mx = x; my = topSafe() - 8; }
+    wasps.push({ x, y, mx, my, vx: 0, vy: 0, warn: hornet ? 1.6 : 1.2, wa: rand(0, TAU), ang: 0, t: rand(0, 10), chase: false, hornet: !!hornet, phase: 'roam', cd: rand(2, 3.5), pt: 0, dx: 0, dy: 0 });
+  }
+
+  // ---------- game events ----------
+  function burst(x, y, color, n, speed, size, life) {
+    for (let i = 0; i < n; i++) {
+      const a = rand(0, TAU), s = rand(speed * 0.4, speed);
+      parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: life * rand(0.7, 1), max: life, color, size: size * rand(0.6, 1.2), spin: rand(-6, 6), r: rand(0, TAU) });
+    }
+  }
+  function float(x, y, text, color, size = 20, life = 1.1) {
+    const m = mainCtx;
+    m.font = `700 ${size}px ${fontStack}`;
+    const w = Math.ceil(m.measureText(text).width + 12), h = Math.ceil(size * 1.6);
+    const c = document.createElement('canvas');
+    c.width = Math.ceil(w * dpr); c.height = Math.ceil(h * dpr);
+    const g = c.getContext('2d');
+    g.scale(dpr, dpr);
+    g.font = m.font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'rtl';
+    g.lineWidth = 4; g.strokeStyle = 'rgba(40,22,6,0.85)'; g.lineJoin = 'round';
+    g.strokeText(text, w / 2, h / 2);
+    g.fillStyle = color; g.fillText(text, w / 2, h / 2);
+    floats.push({ x, y, img: c, w, h, life, max: life });
+    if (floats.length > 14) floats.shift();
+  }
+
+  function collect(f) {
+    f.taken = true; f.tk = 0;
+    let val;
+    if (f.kind === 'gold') { chain.len++; val = 20 * chain.len; }
+    else if (!chain.color || chain.color === f.kind) { chain.len++; chain.color = f.kind; val = 10 * chain.len; }
+    else { chain.color = f.kind; chain.len = 1; val = 10; }
+    pouch.push({ kind: f.kind, val });
+    pending += val;
+    stats.flowers++; stats.chain = Math.max(stats.chain, chain.len);
+    burst(f.x, f.y, COL[f.kind], 10, 140, 5, 0.6);
+    burst(f.x, f.y, '#ffe066', 6, 80, 2.5, 0.5);
+    float(f.x, f.y - 18, '+' + val, '#fff7d6', 18);
+    if (chain.len >= 3) float(f.x, f.y - 40, 'רצף ×' + chain.len, COL[f.kind === 'gold' ? 'gold' : f.kind], 22, 1.3);
+    tone(SCALE[Math.min(chain.len - 1, SCALE.length - 1)], 0.16, 'triangle', 0.13);
+    if (f.kind === 'gold') tone(SCALE[Math.min(chain.len + 1, 7)], 0.22, 'sine', 0.08, 0, 0.07);
+    buzzVibe(12);
+    renderHud();
+  }
+
+  function bank() {
+    let total = pending;
+    score += total;
+    float(hive.x, hive.y - 50, '+' + total, '#fff2b0', 30, 1.5);
+    if (chain.len >= 6) {
+      const bonus = 150 + 50 * (chain.len - 6);
+      score += bonus; total += bonus;
+      float(hive.x, hive.y - 86, 'דבש טהור! +' + bonus, '#ffffff', 24, 1.8);
+      tone(1568, 0.4, 'sine', 0.09, 0, 0.32);
+    }
+    burst(hive.x, hive.y, '#ffc62e', 18 + pouch.length * 3, 200, 5, 0.8);
+    [0, 0.08, 0.16].forEach((d, i) => tone([659, 784, 1047][i], 0.3, 'triangle', 0.11, 0, d));
+    while (score >= nextHeartAt) {
+      nextHeartAt += 1000;
+      if (hearts < 3) {
+        hearts++;
+        float(hive.x, hive.y - 120, 'לב נוסף', '#ff8a98', 22, 1.8);
+      }
+    }
+    pouch = []; pending = 0; chain = { color: null, len: 0 };
+    hive.glow = 1;
+    buzzVibe(25);
+    renderHud();
+  }
+
+  function collectBomb(f) {
+    f.taken = true; f.tk = 0;
+    level = Math.min(LEVELS.length, level + 1);
+    levelTime = 0;
+    shock = { x: f.x, y: f.y, r: 0 };
+    for (const w of wasps) {
+      if (w.warn > 0) w.gone = true;
+      else w.die = Math.hypot(w.x - f.x, w.y - f.y) / 950;
+    }
+    burst(f.x, f.y, COL.bomb, 26, 320, 6, 0.9);
+    burst(f.x, f.y, '#ffe066', 18, 240, 4, 0.8);
+    shake = reduceMotion ? 0 : 18;
+    tone(70, 0.7, 'sawtooth', 0.16, 0.5);
+    [0.15, 0.27, 0.39, 0.51].forEach((d, i) => tone([523, 659, 784, 1047][i], 0.3, 'triangle', 0.1, 0, d));
+    buzzVibe([40, 30, 120]);
+    setupWebs();
+    showBanner();
+    renderHud();
+  }
+
+  function showBanner() {
+    const L = LV();
+    bannerEl.innerHTML = '';
+    const sm = document.createElement('small'); sm.textContent = 'שלב ' + level;
+    const b = document.createElement('b'); b.textContent = L.title;
+    const sp = document.createElement('span'); sp.textContent = 'כל הצרעות התפוצצו! ' + L.note;
+    bannerEl.append(sm, b, sp);
+    bannerEl.hidden = false;
+    bannerEl.style.animation = 'none'; void bannerEl.offsetWidth; bannerEl.style.animation = '';
+    clearTimeout(bannerT);
+    bannerT = setTimeout(() => { bannerEl.hidden = true; }, 3500);
+  }
+
+  // Oriental hornet: roams, then stops, aims and charges in a straight line
+  function hornetStep(w, dt, dx, dy, dd, safe, playing) {
+    if (w.phase === 'wind') {
+      w.pt -= dt;
+      w.vx *= 1 - Math.min(1, dt * 6); w.vy *= 1 - Math.min(1, dt * 6);
+      w.x += w.vx * dt; w.y += w.vy * dt;
+      w.ang = angTo(w.ang, Math.atan2(w.dy, w.dx), 1 - Math.exp(-dt * 12));
+      if (w.pt <= 0) { w.phase = 'dash'; w.pt = 0.55; tone(300, 0.35, 'sawtooth', 0.05, 1.8); }
+      return true;
+    }
+    if (w.phase === 'dash') {
+      w.pt -= dt;
+      w.vx = w.dx * 560; w.vy = w.dy * 560;
+      w.x += w.vx * dt; w.y += w.vy * dt;
+      if (w.pt <= 0 || w.x < -30 || w.x > W + 30 || w.y < topSafe() - 30 || w.y > H + 30) {
+        w.phase = 'roam'; w.cd = rand(2.5, 4);
+        w.vx *= 0.2; w.vy *= 0.2;
+        w.x = clamp(w.x, 0, W); w.y = clamp(w.y, topSafe() - 20, H);
+      }
+      return true;
+    }
+    w.cd -= dt;
+    if (playing && !safe && w.cd <= 0 && dd < 380) {
+      w.phase = 'wind'; w.pt = 0.8; w.dx = dx / dd; w.dy = dy / dd;
+      return true;
+    }
+    return false;
+  }
+
+  function hit(w) {
+    hearts--;
+    bee.inv = 1.8;
+    shake = reduceMotion ? 0 : 14;
+    const d = Math.hypot(w.x - bee.x, w.y - bee.y) || 1;
+    w.vx = (w.x - bee.x) / d * 320; w.vy = (w.y - bee.y) / d * 320;
+    if (pouch.length) {
+      pouch.forEach(p => burst(bee.x, bee.y, COL[p.kind], 6, 220, 5, 0.9));
+      float(bee.x, bee.y - 30, 'האבקה נפלה', '#ffd0d0', 20, 1.3);
+    } else {
+      float(bee.x, bee.y - 30, 'אאוץ׳', '#ffd0d0', 20, 1.1);
+    }
+    pouch = []; pending = 0; chain = { color: null, len: 0 };
+    tone(180, 0.35, 'sawtooth', 0.1, 0.45);
+    buzzVibe([60, 40, 90]);
+    renderHud();
+    if (hearts <= 0) gameOver();
+  }
+
+  // ---------- update ----------
+  const keys = {};
+  function update(dt) {
+    const playing = state === 'play';
+    if (playing) elapsed += dt;
+
+    // bee steering
+    if (playing) {
+      const kx = (keys.ArrowRight || keys.d ? 1 : 0) - (keys.ArrowLeft || keys.a ? 1 : 0);
+      const ky = (keys.ArrowDown || keys.s ? 1 : 0) - (keys.ArrowUp || keys.w ? 1 : 0);
+      if (kx || ky) { bee.tx += kx * 380 * dt; bee.ty += ky * 380 * dt; }
+      bee.tx = clamp(bee.tx, 16, W - 16); bee.ty = clamp(bee.ty, 90, H - 16);
+    } else if (state === 'menu') {
+      const t = performance.now() / 1000;
+      bee.tx = W / 2 + Math.sin(t * 0.6) * W * 0.32;
+      bee.ty = H * 0.62 + Math.sin(t * 1.05) * H * 0.16;
+    }
+    if (state !== 'over') {
+      const inWeb = webs.some(wb => dist(wb, bee) < wb.r);
+      const k = 1 - Math.exp(-dt * (inWeb ? 2.6 : 13));
+      const ox = bee.x, oy = bee.y;
+      bee.x += (bee.tx - bee.x) * k; bee.y += (bee.ty - bee.y) * k;
+      const vx = (bee.x - ox) / dt, vy = (bee.y - oy) / dt;
+      if (Math.hypot(vx, vy) > 25) bee.ang = angTo(bee.ang, Math.atan2(vy, vx), 1 - Math.exp(-dt * 10));
+      bee.hist.unshift({ x: bee.x, y: bee.y });
+      if (bee.hist.length > 50) bee.hist.pop();
+    }
+    bee.inv = Math.max(0, bee.inv - dt);
+
+    // flowers
+    fullMsgCd -= dt;
+    for (const f of flowers) {
+      f.age += dt;
+      if (f.taken) { f.tk += dt; continue; }
+      f.life -= dt;
+      if (f.life <= 0) { f.dead = true; burst(f.x, f.y, '#8a6a3a', 5, 40, 4, 0.7); continue; }
+      if (f.kind === 'bomb' && Math.random() < dt * 10) parts.push({ x: f.x + rand(-6, 14), y: f.y + rand(-22, -8), vx: rand(-30, 30), vy: rand(-60, -20), life: 0.4, max: 0.4, color: '#ffe066', size: 2, spin: 0, r: 0, star: true });
+      if (f.kind === 'gold' && Math.random() < dt * 6) parts.push({ x: f.x + rand(-16, 16), y: f.y + rand(-16, 16), vx: 0, vy: -20, life: 0.6, max: 0.6, color: '#fff6b0', size: 2.5, spin: 0, r: 0, star: true });
+      if (playing && f.age > 0.25 && dist(f, bee) < 22 * f.scale + 10) {
+        if (f.kind === 'bomb') collectBomb(f);
+        else if (pouch.length < pouchMax()) collect(f);
+        else if (fullMsgCd <= 0) { float(bee.x, bee.y - 34, 'השק מלא! לכוורת', '#ffffff', 18, 1.2); fullMsgCd = 1.6; }
+      }
+    }
+    flowers = flowers.filter(f => !f.dead && !(f.taken && f.tk > 0.45));
+    flowerTimer -= dt;
+    if (playing && level < LEVELS.length && score >= LEVELS[level].at && !flowers.some(f => f.kind === 'bomb' && !f.taken)) {
+      const ok = spawnFlower(false, true);
+      if (ok) {
+        const b = flowers[flowers.length - 1];
+        float(b.x, b.y - 34, 'פרח פצצה!', '#ffd0c8', 22, 2);
+        [0, 0.1].forEach((d, i) => tone([880, 1175][i], 0.2, 'square', 0.05, 0, d));
+        renderHud();
+      }
+    }
+    if (flowers.filter(f => !f.taken && f.kind !== 'bomb').length < flowerTarget() && flowerTimer <= 0) {
+      spawnFlower(false);
+      flowerTimer = rand(0.5, 1.2);
+    }
+
+    // hive: banking is instant; sheltering inside is limited to SHELTER_MAX seconds per game
+    hive.glow = Math.max(0, hive.glow - dt * 1.5);
+    const inHive = dist(bee, hive) < hive.r + 6;
+    if (playing && inHive && pouch.length) bank();
+    if (playing && inHive) {
+      hiveStay += dt;
+      if (hiveStay > 1 && shelter > 0) {
+        shelter = Math.max(0, shelter - dt);
+        if (shelter === 0) {
+          float(hive.x, hive.y - 70, 'הכוורת כבר לא מגינה', '#ffd0d0', 20, 2.2);
+          tone(220, 0.45, 'square', 0.06, 0.6);
+        }
+      }
+    } else hiveStay = 0;
+    const sheltered = shelter > 0;
+    const safe = inHive && sheltered;
+
+    // wasps
+    const L = LV();
+    if (playing) {
+      levelTime += dt;
+      const lead = level === 1 ? 7 : 3;
+      const want = levelTime < lead ? 0 : Math.min(L.max, (level === 1 ? 1 : 2) + Math.floor((levelTime - lead) / L.every));
+      const live = wasps.filter(w => w.die === undefined && !w.gone);
+      if (live.filter(w => !w.hornet).length < want) spawnWasp(false);
+      if (levelTime > lead + 2 && live.filter(w => w.hornet).length < L.hornets) spawnWasp(true);
+    }
+    const wSpeed = Math.min(L.speed[1], L.speed[0] + levelTime);
+    const reach = 240 + level * 14;
+    for (const w of wasps) {
+      if (w.gone) continue;
+      w.t += dt;
+      if (w.die !== undefined) {
+        w.die -= dt;
+        if (w.die <= 0) {
+          w.gone = true;
+          burst(w.x, w.y, '#ffb81c', 14, 220, 5, 0.7);
+          burst(w.x, w.y, '#ff5a3c', 8, 160, 4, 0.6);
+        }
+        continue;
+      }
+      if (w.warn > 0) { w.warn -= dt; continue; }
+      const dx = bee.x - w.x, dy = bee.y - w.y, dd = Math.hypot(dx, dy) || 1;
+      if (!(w.hornet && hornetStep(w, dt, dx, dy, dd, safe, playing))) {
+        let ax, ay;
+        if (playing && dd < reach && !safe) { ax = dx / dd; ay = dy / dd; w.chase = true; }
+        else { w.wa += rand(-1, 1) * dt * 3; ax = Math.cos(w.wa); ay = Math.sin(w.wa); w.chase = false; }
+        const hx = w.x - hive.x, hy = w.y - hive.y, hd = Math.hypot(hx, hy) || 1;
+        if (sheltered && hd < hive.r + 70) { ax += hx / hd * 3; ay += hy / hd * 3; }
+        if (w.x < 30) ax += 1.6; if (w.x > W - 30) ax -= 1.6;
+        if (w.y < topSafe() - 10) ay += 1.6; if (w.y > H - 30) ay -= 1.6;
+        const n = Math.hypot(ax, ay) || 1, spd = wSpeed * (w.chase ? 1 : 0.6) * (w.hornet ? 0.8 : 1);
+        const kk = Math.min(1, dt * 2.2);
+        w.vx += (ax / n * spd - w.vx) * kk; w.vy += (ay / n * spd - w.vy) * kk;
+        w.x += w.vx * dt + Math.sin(w.t * 9) * 0.6; w.y += w.vy * dt + Math.cos(w.t * 7) * 0.6;
+        if (Math.hypot(w.vx, w.vy) > 10) w.ang = angTo(w.ang, Math.atan2(w.vy, w.vx), 1 - Math.exp(-dt * 8));
+      }
+      if (playing && !safe && bee.inv <= 0 && dd < (w.hornet ? 30 : 23)) hit(w);
+      if (state !== 'play') break;
+    }
+    wasps = wasps.filter(w => !w.gone);
+    if (shock) { shock.r += 950 * dt; if (shock.r > Math.hypot(W, H)) shock = null; }
+
+    // particles / floats
+    for (const p of parts) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 1 - dt * 3; p.vy *= 1 - dt * 3; p.r += p.spin * dt; }
+    parts = parts.filter(p => p.life > 0);
+    if (parts.length > 140) parts.splice(0, parts.length - 140);
+    for (const f of floats) { f.life -= dt; f.y -= 38 * dt; }
+    floats = floats.filter(f => f.life > 0);
+    shake = Math.max(0, shake - dt * 40);
+
+    if (shownScore !== score) {
+      shownScore += (score - shownScore) * Math.min(1, dt * 8);
+      if (Math.abs(score - shownScore) < 1) shownScore = score;
+      scoreEl.textContent = fmt(shownScore);
+    }
+  }
+
+  // ---------- drawing ----------
+  // one soft glow drawn once, then stamped with drawImage
+  const glow = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d');
+    const rg = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    rg.addColorStop(0, 'rgba(255,255,255,1)'); rg.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = rg; g.fillRect(0, 0, 64, 64);
+    const tint = color => {
+      const t = document.createElement('canvas'); t.width = t.height = 64;
+      const tg = t.getContext('2d');
+      tg.drawImage(c, 0, 0); tg.globalCompositeOperation = 'source-in';
+      tg.fillStyle = color; tg.fillRect(0, 0, 64, 64);
+      return t;
+    };
+    return { honey: tint('rgb(255,214,90)'), firefly: tint('rgb(240,255,140)'), bomb: tint('rgb(255,80,50)') };
+  })();
+  const webSprite = (() => {
+    const S = 100, R = 46, c = document.createElement('canvas'); c.width = c.height = S * 2;
+    const g = c.getContext('2d');
+    g.scale(2, 2); g.translate(S / 2, S / 2);
+    g.strokeStyle = 'rgba(255,255,255,0.78)'; g.lineWidth = 0.9;
+    const spokes = 10;
+    const ang = i => i * TAU / spokes + (i % 2) * 0.08;
+    g.beginPath();
+    for (let i = 0; i < spokes; i++) { g.moveTo(0, 0); g.lineTo(Math.cos(ang(i)) * R, Math.sin(ang(i)) * R); }
+    g.stroke();
+    for (let k = 1; k <= 6; k++) {
+      const rr = k * R / 6.4;
+      g.beginPath();
+      for (let i = 0; i <= spokes; i++) {
+        const a0 = ang(i % spokes), a1 = ang((i + 1) % spokes);
+        const am = a0 + Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0)) / 2;
+        if (i === 0) g.moveTo(Math.cos(a0) * rr, Math.sin(a0) * rr);
+        g.quadraticCurveTo(Math.cos(am) * rr * 0.86, Math.sin(am) * rr * 0.86, Math.cos(a1) * rr, Math.sin(a1) * rr);
+      }
+      g.stroke();
+    }
+    return c;
+  })();
+  function drawArrow(tx, ty, rr, fill, t) {
+    const a = Math.atan2(ty - bee.y, tx - bee.x);
+    const r2 = rr + Math.sin(t * 8) * 3;
+    ctx.save(); ctx.translate(bee.x + Math.cos(a) * r2, bee.y + Math.sin(a) * r2); ctx.rotate(a);
+    ctx.fillStyle = fill; ctx.strokeStyle = '#33200c'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(-5, -7); ctx.lineTo(-2, 0); ctx.lineTo(-5, 7); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+  function stamp(img, x, y, r, a) {
+    ctx.globalAlpha = a; ctx.drawImage(img, x - r, y - r, r * 2, r * 2); ctx.globalAlpha = 1;
+  }
+
+  function hexPath(c, x, y, r) {
+    c.beginPath();
+    for (let i = 0; i < 6; i++) { const a = -Math.PI / 2 + i * TAU / 6; c.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); }
+    c.closePath();
+  }
+
+  function hiveArt() {
+    const r = 15, d = r * Math.sqrt(3);
+    ctx.fillStyle = 'rgba(30,20,5,0.25)';
+    ctx.beginPath(); ctx.ellipse(6, 12, 50, 40, 0, 0, TAU); ctx.fill();
+    const cells = [[0, 0]];
+    for (let i = 0; i < 6; i++) cells.push([Math.cos(i * TAU / 6) * d, Math.sin(i * TAU / 6) * d]);
+    cells.forEach(([cx, cy], i) => {
+      hexPath(ctx, cx, cy, r);
+      ctx.fillStyle = '#ffc62e'; ctx.fill();
+      ctx.lineWidth = 2.5; ctx.strokeStyle = '#a8620a'; ctx.stroke();
+      if (i > 0) {
+        hexPath(ctx, cx, cy + 2, r * 0.62);
+        ctx.fillStyle = i % 2 ? '#e8920f' : '#f5a91c'; ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.45)';
+        ctx.beginPath(); ctx.ellipse(cx - 3, cy - 3, 3, 1.6, -0.6, 0, TAU); ctx.fill();
+      }
+    });
+    ctx.fillStyle = '#3a2208';
+    ctx.beginPath(); ctx.ellipse(0, 2, 7.5, 5.5, 0, 0, TAU); ctx.fill();
+  }
+
+  function drawHive(t) {
+    const { x, y } = hive;
+    if (pouch.length || hive.glow > 0) {
+      const pulse = pouch.length ? 0.35 + 0.2 * Math.sin(t * 5) : 0;
+      const a = Math.max(pulse, hive.glow * 0.8);
+      stamp(glow.honey, x, y, 90, Math.min(1, a));
+    }
+    ctx.drawImage(sprite('hive', 130, hiveArt), x - 65, y - 65, 130, 130);
+    // shelter ring: how much of the 10 hive seconds is left
+    const frac = shelter / SHELTER_MAX;
+    ctx.lineCap = 'round'; ctx.lineWidth = 5;
+    ctx.strokeStyle = 'rgba(40,24,8,0.4)';
+    ctx.beginPath(); ctx.arc(x, y, 52, 0, TAU); ctx.stroke();
+    if (frac > 0) {
+      ctx.strokeStyle = frac > 0.3 ? '#ffe27a' : '#ff6a4a';
+      ctx.beginPath(); ctx.arc(x, y, 52, -Math.PI / 2, -Math.PI / 2 + TAU * frac); ctx.stroke();
+    }
+    ctx.lineCap = 'butt';
+    if (state === 'play' && hiveStay > 1 && shelter > 0) {
+      ctx.font = `700 22px ${fontStack}`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(40,22,6,0.85)'; ctx.lineJoin = 'round';
+      const txt = shelter.toFixed(1);
+      ctx.strokeText(txt, x, y - 72); ctx.fillStyle = frac > 0.3 ? '#fff2b0' : '#ffb0a0'; ctx.fillText(txt, x, y - 72);
+    }
+  }
+
+  function petals(n, dd, rx, ry, color, edge) {
+    for (let i = 0; i < n; i++) {
+      ctx.save(); ctx.rotate(i * TAU / n);
+      ctx.beginPath(); ctx.ellipse(dd, 0, rx, ry, 0, 0, TAU);
+      ctx.fillStyle = color; ctx.fill();
+      if (edge) { ctx.strokeStyle = edge; ctx.lineWidth = 1; ctx.stroke(); }
+      ctx.restore();
+    }
+  }
+
+  // Every flower and insect is drawn once into a small canvas and then stamped,
+  // instead of re-tracing dozens of paths per object every frame.
+  const spriteCache = new Map();
+  function sprite(key, size, draw) {
+    let c = spriteCache.get(key);
+    if (!c) {
+      c = document.createElement('canvas');
+      const px = Math.ceil(size * dpr * 1.25); // a little extra so scaled-up flowers stay crisp
+      c.width = c.height = px;
+      const g = c.getContext('2d');
+      g.scale(px / size, px / size); g.translate(size / 2, size / 2);
+      const keep = ctx;
+      ctx = g; draw(); ctx = keep;
+      spriteCache.set(key, c);
+    }
+    return c;
+  }
+  function flowerArt(kind) {
+    ctx.fillStyle = '#3e7f28';
+    for (const a of [0.6, 3.6]) { ctx.save(); ctx.rotate(a); ctx.beginPath(); ctx.ellipse(19, 0, 11, 5, 0, 0, TAU); ctx.fill(); ctx.restore(); }
+    const edge = 'rgba(60,20,40,0.18)';
+    if (kind === 'pink') { petals(5, 10, 10, 8.5, COL.pink, edge); ctx.rotate(TAU / 10); petals(5, 6, 5.5, 4.5, '#ffb3d0'); }
+    else if (kind === 'violet') { petals(8, 11.5, 11, 4.6, COL.violet, edge); ctx.rotate(TAU / 16); petals(8, 7, 6, 2.6, '#c6b5ff'); }
+    else if (kind === 'blue') { petals(6, 10, 10, 6.6, COL.blue, edge); ctx.rotate(TAU / 12); petals(6, 5.5, 4.5, 3, '#a6e0ff'); }
+    else if (kind === 'orange') { petals(4, 10, 11, 9.5, COL.orange, edge); ctx.rotate(TAU / 8); petals(4, 7, 6.5, 5, '#ffc08a'); }
+    else if (kind === 'white') { petals(14, 12, 10, 2.9, COL.white, 'rgba(90,80,130,0.35)'); }
+    else { petals(10, 11.5, 10.5, 4.4, '#ffcf2a', 'rgba(150,90,0,0.35)'); ctx.rotate(TAU / 20); petals(10, 7, 6, 2.5, '#fff1a0'); }
+    ctx.fillStyle = '#ffde59';
+    ctx.beginPath(); ctx.arc(0, 0, 5.5, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#b8740f'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.fillStyle = '#b8740f';
+    for (let i = 0; i < 5; i++) { const a = i * TAU / 5 + 0.4; ctx.beginPath(); ctx.arc(Math.cos(a) * 2.6, Math.sin(a) * 2.6, 0.9, 0, TAU); ctx.fill(); }
+  }
+
+  function drawFlower(f, t) {
+    let s = f.scale * easeOutBack(Math.min(1, f.age / 0.45));
+    let alpha = 1, rot = f.rot + Math.sin(t * 1.3 + f.seed) * 0.06;
+    if (f.taken) { const k = f.tk / 0.45; s *= 1 - k; rot += k * 2; }
+    else if (f.life < 3) { alpha = 0.45 + 0.55 * (f.life / 3); s *= 0.82 + 0.18 * (f.life / 3); if (f.life < 1.2) rot += Math.sin(t * 30) * 0.08; }
+    if (s <= 0.01) return;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(f.x, f.y);
+    ctx.fillStyle = 'rgba(20,50,10,0.22)';
+    ctx.beginPath(); ctx.ellipse(4, 6, 22 * s, 18 * s, 0, 0, TAU); ctx.fill();
+    ctx.rotate(rot); ctx.scale(s, s);
+    if (f.kind === 'bomb') {
+      const pul = 1 + 0.08 * Math.sin(t * 8);
+      ctx.scale(pul, pul);
+      ctx.save(); ctx.globalAlpha = alpha * (0.55 + 0.3 * Math.sin(t * 8)); ctx.drawImage(glow.bomb, -46, -46, 92, 92); ctx.restore();
+      ctx.fillStyle = '#3e7f28';
+      for (const a of [0.6, 3.6]) { ctx.save(); ctx.rotate(a); ctx.beginPath(); ctx.ellipse(19, 0, 11, 5, 0, 0, TAU); ctx.fill(); ctx.restore(); }
+      petals(7, 12, 12, 7.5, COL.bomb, 'rgba(90,0,0,0.45)'); ctx.rotate(TAU / 14); petals(7, 8, 6, 3.5, '#ffb199');
+      ctx.fillStyle = '#1c1010'; ctx.beginPath(); ctx.arc(0, 0, 8.5, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.arc(-3, -3, 2.2, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#c9a46a'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(4.5, -6.5); ctx.quadraticCurveTo(7, -11, 10.5, -13); ctx.stroke();
+      ctx.fillStyle = Math.sin(t * 40) > 0 ? '#ffe066' : '#ff8a2a';
+      ctx.beginPath(); ctx.arc(10.5, -13, 2.6, 0, TAU); ctx.fill();
+      ctx.restore();
+      return;
+    }
+    if (f.kind === 'gold') {
+      const gl = 0.5 + 0.5 * Math.sin(t * 6 + f.seed);
+      ctx.drawImage(glow.honey, -32, -32, 64, 64);
+      ctx.globalAlpha = alpha * (0.3 + gl * 0.5);
+      ctx.drawImage(glow.honey, -30, -30, 60, 60);
+      ctx.globalAlpha = alpha;
+    }
+    const img = sprite('f-' + f.kind, 64, () => flowerArt(f.kind));
+    ctx.drawImage(img, -32, -32, 64, 64);
+    ctx.restore();
+  }
+
+  function insectArt(wasp, hornet) {
+    const ink = hornet ? '#3a0f05' : wasp ? '#1c1206' : '#2a1a08';
+    const body = hornet ? '#b8441c' : '#ffb81c';
+    if (wasp) {
+      ctx.fillStyle = body;
+      ctx.beginPath(); ctx.ellipse(-9, 0, 12, 6.8, 0, 0, TAU); ctx.fill();
+      ctx.save(); ctx.clip(); ctx.fillStyle = hornet ? '#ffd23a' : ink;
+      for (const sx of [-17, -11, -5]) ctx.fillRect(sx, -8, 3.4, 16);
+      ctx.restore();
+      ctx.strokeStyle = ink; ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.ellipse(-9, 0, 12, 6.8, 0, 0, TAU); ctx.stroke();
+      ctx.fillStyle = ink; ctx.beginPath(); ctx.moveTo(-20, -2.2); ctx.lineTo(-27, 0); ctx.lineTo(-20, 2.2); ctx.fill();
+      ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(3, 0, 4.6, 0, TAU); ctx.fill();
+      ctx.fillStyle = hornet ? '#e0662a' : '#ffb81c'; ctx.beginPath(); ctx.arc(9.5, 0, 4.8, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#d4202a';
+      ctx.beginPath(); ctx.ellipse(11.5, -2.6, 1.8, 1.4, 0.4, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(11.5, 2.6, 1.8, 1.4, -0.4, 0, TAU); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(9.5, -4.4); ctx.lineTo(13.6, -1.2); ctx.moveTo(9.5, 4.4); ctx.lineTo(13.6, 1.2); ctx.stroke();
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(13, -2); ctx.quadraticCurveTo(18, -4, 19, -9); ctx.moveTo(13, 2); ctx.quadraticCurveTo(18, 4, 19, 9); ctx.stroke();
+    } else {
+      ctx.fillStyle = '#f7c22c';
+      ctx.beginPath(); ctx.ellipse(-4, 0, 12.5, 9.2, 0, 0, TAU); ctx.fill();
+      ctx.save(); ctx.clip(); ctx.fillStyle = ink;
+      for (const sx of [-13, -7, -1]) ctx.fillRect(sx, -11, 3.2, 22);
+      ctx.restore();
+      ctx.strokeStyle = ink; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.ellipse(-4, 0, 12.5, 9.2, 0, 0, TAU); ctx.stroke();
+      ctx.fillStyle = ink; ctx.beginPath(); ctx.moveTo(-15.5, -2); ctx.lineTo(-21, 0); ctx.lineTo(-15.5, 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(9.5, 0, 6.2, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(12, -2.8, 1.9, 0, TAU); ctx.arc(12, 2.8, 1.9, 0, TAU); ctx.fill();
+      ctx.fillStyle = ink;
+      ctx.beginPath(); ctx.arc(12.6, -2.6, 0.9, 0, TAU); ctx.arc(12.6, 3, 0.9, 0, TAU); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.moveTo(14, -3); ctx.quadraticCurveTo(19, -5, 20, -10); ctx.moveTo(14, 3); ctx.quadraticCurveTo(19, 5, 20, 10); ctx.stroke();
+      ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(20, -10, 1.6, 0, TAU); ctx.arc(20, 10, 1.6, 0, TAU); ctx.fill();
+    }
+  }
+  function wingArt(wasp) {
+    ctx.fillStyle = wasp ? 'rgba(210,225,255,0.55)' : 'rgba(255,255,255,0.72)';
+    ctx.strokeStyle = 'rgba(40,30,20,0.35)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(0, 0, 11, 6, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  }
+
+  function drawInsect(x, y, ang, t, wasp, alpha = 1, hornet = false) {
+    ctx.save();
+    ctx.globalAlpha = alpha * 0.22;
+    ctx.fillStyle = '#10200a';
+    ctx.beginPath(); ctx.ellipse(x + 7, y + 13, hornet ? 19 : 14, hornet ? 9 : 7, 0, 0, TAU); ctx.fill();
+    ctx.globalAlpha = alpha;
+    ctx.translate(x, y + Math.sin(t * 7) * 1.3);
+    ctx.rotate(ang);
+    if (hornet) ctx.scale(1.4, 1.4);
+    const body = sprite(hornet ? 'hornet' : wasp ? 'wasp' : 'bee', 60, () => insectArt(wasp, hornet));
+    ctx.drawImage(body, -30, -30, 60, 60);
+    // wings on top (seen from above), flapping
+    const wing = sprite(wasp ? 'wing-w' : 'wing-b', 26, () => wingArt(wasp));
+    const flap = Math.sin(t * (wasp ? 60 : 48)) * 0.45;
+    for (const sd of [-1, 1]) {
+      ctx.save();
+      ctx.translate(wasp ? 1 : 2, sd * 3);
+      ctx.rotate(sd * (-0.45 + flap));
+      ctx.translate(-5, sd * 9);
+      ctx.drawImage(wing, -13, -13, 26, 26);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  function drawWarning(w, t) {
+    const a = 0.6 + 0.4 * Math.sin(t * 18);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.fillStyle = '#ff3b3b';
+    ctx.beginPath(); ctx.arc(w.mx, w.my, 15, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 20px ' + fontStack;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('!', w.mx, w.my + 1);
+    ctx.restore();
+  }
+
+  let lastDusk = -1;
+
+  function render() {
+    const t = performance.now() / 1000;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    if (shake > 0) ctx.translate(rand(-shake, shake) * 0.5, rand(-shake, shake) * 0.5);
+    drawHive(t);
+    for (const f of flowers) drawFlower(f, t);
+    for (const wb of webs) {
+      ctx.save(); ctx.translate(wb.x, wb.y); ctx.rotate(wb.rot);
+      const sz = wb.r * 2 * (50 / 46);
+      ctx.drawImage(webSprite, -sz / 2, -sz / 2, sz, sz);
+      ctx.restore();
+    }
+
+    // flight trail
+    ctx.fillStyle = 'rgba(255,255,230,0.5)';
+    for (let i = 4; i < bee.hist.length; i += 4) {
+      const p = bee.hist[i];
+      ctx.globalAlpha = (1 - i / bee.hist.length) * 0.6;
+      ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3);
+    }
+    ctx.globalAlpha = 1;
+
+    // pollen tail follows the bee like a little caravan
+    for (let i = pouch.length - 1; i >= 0; i--) {
+      const idx = Math.min(bee.hist.length - 1, (i + 1) * 5);
+      const p = bee.hist[idx] || bee;
+      const r = 5.5;
+      ctx.fillStyle = COL[pouch[i].kind];
+      ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(40,20,5,0.5)'; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.beginPath(); ctx.arc(p.x - 1.6, p.y - 1.8, 1.7, 0, TAU); ctx.fill();
+    }
+
+    for (const w of wasps) {
+      if (w.warn > 0) { drawWarning(w, t); continue; }
+      if (w.phase === 'wind') {
+        ctx.save();
+        ctx.strokeStyle = `rgba(255,60,40,${0.35 + 0.3 * Math.sin(t * 30)})`;
+        ctx.lineWidth = 4; ctx.setLineDash([10, 9]);
+        ctx.beginPath(); ctx.moveTo(w.x, w.y); ctx.lineTo(w.x + w.dx * 340, w.y + w.dy * 340); ctx.stroke();
+        ctx.restore();
+      }
+      const a = w.die !== undefined ? 0.45 + 0.55 * Math.abs(Math.sin(t * 30)) : 1;
+      drawInsect(w.x, w.y, w.ang, t + w.t, true, a, w.hornet);
+    }
+    if (shock) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, 1 - shock.r / Math.hypot(W, H));
+      ctx.strokeStyle = '#fff3b0'; ctx.lineWidth = 10;
+      ctx.beginPath(); ctx.arc(shock.x, shock.y, shock.r, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = '#ff6a3a'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(shock.x, shock.y, Math.max(0, shock.r - 14), 0, TAU); ctx.stroke();
+      ctx.restore();
+    }
+
+    const blink = bee.inv > 0 && Math.floor(t * 14) % 2 === 0;
+    if (state !== 'over' || overTimer > 0) drawInsect(bee.x, bee.y, bee.ang, t, false, blink ? 0.35 : 1);
+
+    // arrows: to the hive when the pouch is full, to the bomb flower when it blooms
+    if (state === 'play') {
+      if (pouch.length >= pouchMax()) drawArrow(hive.x, hive.y, 34, '#ffc62e', t);
+      const bomb = flowers.find(f => f.kind === 'bomb' && !f.taken);
+      if (bomb && dist(bomb, bee) > 70) drawArrow(bomb.x, bomb.y, 46, '#ff3b30', t);
+    }
+
+    for (const p of parts) {
+      ctx.globalAlpha = Math.max(0, p.life / p.max);
+      ctx.fillStyle = p.color;
+      const sz = p.star ? p.size * 1.6 : p.size * (1.2 + 0.5 * Math.sin(p.r));
+      ctx.fillRect(p.x - sz / 2, p.y - sz / 2, sz, sz * (p.star ? 1 : 0.7));
+    }
+    ctx.globalAlpha = 1;
+
+    for (const f of floats) {
+      const k = f.life / f.max;
+      ctx.globalAlpha = Math.min(1, k * 2.2);
+      const pop = 1 + Math.max(0, (k - 0.85)) * 2;
+      const w = f.w * pop, h = f.h * pop;
+      ctx.drawImage(f.img, f.x - w / 2, f.y - h / 2, w, h);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    // dusk: the day slowly turns to evening and back, with fireflies
+    const phase = (elapsed / 150) % 1;
+    let dusk = 0.5 - 0.5 * Math.cos(phase * TAU);
+    if (state !== 'menu' && LV().night) dusk = Math.max(dusk, 0.95);
+    const duskOp = dusk > 0.05 ? (Math.round(dusk * 0.32 * 100) / 100) : 0;
+    if (duskOp !== lastDusk) { duskEl.style.opacity = duskOp; duskEl.hidden = duskOp === 0; lastDusk = duskOp; }
+    if (dusk > 0.05) {
+      if (dusk > 0.45) {
+        const fa = (dusk - 0.45) / 0.55;
+        for (let i = 0; i < 14; i++) {
+          const fx = (Math.sin(t * 0.3 + i * 12.9) * 0.5 + 0.5) * W;
+          const fy = topSafe() + (Math.sin(t * 0.23 + i * 7.3) * 0.5 + 0.5) * (H - topSafe());
+          const gl = (Math.sin(t * 3 + i) * 0.5 + 0.5) * fa;
+          stamp(glow.firefly, fx, fy, 10, gl);
+        }
+      }
+    }
+  }
+
+  // ---------- HUD ----------
+  const HEART = '<svg class="heart%C" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2Z"/></svg>';
+  function renderHud() {
+    heartsEl.innerHTML = [0, 1, 2].map(i => HEART.replace('%C', i < hearts ? '' : ' lost')).join('');
+    heartsEl.setAttribute('aria-label', hearts + ' לבבות');
+    let html = '';
+    for (let i = 0; i < pouchMax(); i++) {
+      const p = pouch[i];
+      html += p ? `<div class="slot on" style="--c:${COL[p.kind]}"></div>` : '<div class="slot"></div>';
+    }
+    slotsEl.innerHTML = html;
+    pendingEl.textContent = pending ? '+' + pending : '';
+    lvlEl.textContent = level;
+    const next = LEVELS[level];
+    if (next) {
+      const from = LV().at;
+      lvlFill.style.width = clamp((score - from) / (next.at - from), 0, 1) * 100 + '%';
+      const ready = score >= next.at;
+      lvlBar.classList.toggle('ready', ready);
+      lvlNext.textContent = ready ? 'פרח פצצה פרח!' : fmt(next.at);
+    } else {
+      lvlFill.style.width = '100%'; lvlBar.classList.remove('ready');
+      lvlNext.textContent = 'השלב האחרון';
+    }
+    const r = pouchChip.getBoundingClientRect(), ar = app.getBoundingClientRect();
+    if (r.height) topSafeVal = Math.max(100, r.bottom - ar.top + 12);
+  }
+
+  // ---------- flow ----------
+  function setBestText() {
+    const txt = best ? `השיא שלך: ${fmt(best)} גרם דבש · שלב ${bestLevel}` : '';
+    $('bestMenu').textContent = txt;
+    $('bestOver').textContent = txt;
+  }
+
+  function rankFor(lv, s) {
+    if (lv >= 10) return 'מלכת הגינה';
+    if (lv >= 8) return 'יד ימינה של המלכה';
+    if (lv >= 6) return 'שומרת הכוורת';
+    if (lv >= 4) return 'מלקטת מנוסה';
+    if (lv >= 2 || s >= 2000) return 'פועלת חרוצה';
+    return 'דבורה מתלמדת';
+  }
+
+  let wakeLock = null;
+  async function grabWake() {
+    try { if (navigator.wakeLock && !wakeLock) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { wakeLock = null; }
+  }
+  function dropWake() {
+    try { wakeLock && wakeLock.release(); } catch (e) {}
+    wakeLock = null;
+  }
+
+  function start() {
+    ensureAudio();
+    reset();
+    state = 'play';
+    menu.hidden = true; over.hidden = true; pauseOv.hidden = true;
+    hud.classList.remove('hidden-play');
+    renderHud();
+    tone(523, 0.12, 'triangle', 0.1); tone(784, 0.18, 'triangle', 0.1, 0, 0.1);
+    grabWake();
+    kick();
+  }
+
+  function gameOver() {
+    state = 'over';
+    overTimer = 0.9;
+    bannerEl.hidden = true;
+    burst(bee.x, bee.y, '#f7c22c', 20, 160, 5, 1);
+    tone(392, 0.25, 'triangle', 0.1, 0, 0.1); tone(330, 0.25, 'triangle', 0.1, 0, 0.3); tone(262, 0.45, 'triangle', 0.1, 0, 0.5);
+    const isBest = score > best;
+    if (isBest) { best = score; try { localStorage.setItem('buzz-best', String(best)); } catch (e) {} }
+    if (level > bestLevel) { bestLevel = level; try { localStorage.setItem('buzz-best-level', String(bestLevel)); } catch (e) {} }
+    $('finalScore').textContent = fmt(score);
+    $('rank').textContent = 'שלב ' + level + ' · ' + rankFor(level, score);
+    $('newBest').hidden = !(isBest && score > 0);
+    $('stFlowers').textContent = stats.flowers;
+    $('stChain').textContent = stats.chain;
+    const s = Math.floor(elapsed);
+    $('stTime').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+    $('fact').textContent = FACTS[(Math.random() * FACTS.length) | 0];
+    setBestText();
+    napAudio();
+    setTimeout(() => { if (state === 'over') { over.hidden = false; hud.classList.add('hidden-play'); $('againBtn').focus({ preventScroll: true }); } }, 1000);
+    dropWake();
+  }
+
+  function pause() {
+    if (state !== 'play') return;
+    state = 'pause';
+    pauseOv.hidden = false;
+    dragging = false;
+    dropWake();
+    napAudio();
+  }
+  function resume() {
+    if (state !== 'pause') return;
+    ensureAudio();
+    state = 'play';
+    pauseOv.hidden = true;
+    grabWake();
+    kick();
+  }
+  function toMenu() {
+    state = 'menu';
+    reset();
+    pauseOv.hidden = true; over.hidden = true; menu.hidden = false; bannerEl.hidden = true;
+    hud.classList.add('hidden-play');
+    setBestText();
+    dropWake();
+    napAudio();
+    kick();
+  }
+
+  // ---------- input ----------
+  let dragging = false, px = 0, py = 0, pid = null;
+  app.addEventListener('pointerdown', e => {
+    if (state !== 'play' || e.target.closest('button')) return;
+    dragging = true; pid = e.pointerId; px = e.clientX; py = e.clientY;
+    try { app.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  app.addEventListener('pointermove', e => {
+    if (!dragging || e.pointerId !== pid || state !== 'play') return;
+    bee.tx = clamp(bee.tx + (e.clientX - px) * SENS, 16, W - 16);
+    bee.ty = clamp(bee.ty + (e.clientY - py) * SENS, 90, H - 16);
+    px = e.clientX; py = e.clientY;
+  });
+  const endDrag = e => { if (e.pointerId === pid) { dragging = false; pid = null; } };
+  app.addEventListener('pointerup', endDrag);
+  app.addEventListener('pointercancel', endDrag);
+  window.addEventListener('keydown', e => {
+    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    keys[k] = true;
+    if (k.startsWith('Arrow')) e.preventDefault();
+    if ((k === 'Escape' || k === 'p') && state === 'play') pause();
+    else if ((k === 'Escape' || k === 'p') && state === 'pause') resume();
+  });
+  window.addEventListener('keyup', e => { const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; keys[k] = false; });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { pause(); wakeLock = null; } else kick(); });
+
+  $('startBtn').addEventListener('click', start);
+  $('againBtn').addEventListener('click', start);
+  $('resumeBtn').addEventListener('click', resume);
+  $('quitBtn').addEventListener('click', toMenu);
+  $('pauseBtn').addEventListener('click', pause);
+  function setEcoText() {
+    document.querySelectorAll('.eco-btn').forEach(b => {
+      b.textContent = eco ? 'מצב חיסכון בסוללה: פועל' : 'מצב חלק: 60 פריימים (מחמם יותר)';
+      b.setAttribute('aria-pressed', String(eco));
+    });
+  }
+  document.querySelectorAll('.eco-btn').forEach(b => b.addEventListener('click', () => {
+    eco = !eco;
+    try { localStorage.setItem('buzz-eco', eco ? '1' : '0'); } catch (e) {}
+    setEcoText();
+    resize();
+    render();
+  }));
+  setEcoText();
+  $('muteBtn').addEventListener('click', () => {
+    muted = !muted; ensureAudio(); setMuteIcon();
+    try { localStorage.setItem('buzz-muted', muted ? '1' : '0'); } catch (e) {}
+  });
+
+  // ---------- loop ----------
+  let last = performance.now(), running = false;
+  function idle() {
+    return document.hidden || state === 'pause' || (state === 'over' && !over.hidden);
+  }
+  function kick() {
+    if (running || idle()) return;
+    running = true; last = performance.now();
+    requestAnimationFrame(frame);
+  }
+  function frame(now) {
+    if (idle()) { running = false; return; }
+    requestAnimationFrame(frame);
+    // battery saver draws 30 frames a second; smooth mode 60 (never 120); the menu 20-30
+    const minGap = state === 'menu' ? (eco ? 45 : 30) : (eco ? 30 : 15);
+    if (now - last < minGap) return;
+    const dt = Math.min(0.06, Math.max(0.001, (now - last) / 1000));
+    last = now;
+    update(dt);
+    if (state === 'over' && overTimer > 0) overTimer -= dt;
+    render();
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  reset();
+  setMuteIcon();
+  setBestText();
+  kick();
+})();
+</script>
+
+<script>
+  // keep a copy of the game on the phone so it opens without internet
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); });
+  }
+</script>
+</body>
+</html>
