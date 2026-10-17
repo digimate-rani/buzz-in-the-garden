@@ -57,6 +57,8 @@ git add -A && git commit -m "עדכון" && git push
 
 ב-GitHub: **Settings ← Pages ← Build and deployment**: Source: `Deploy from a branch`, Branch: `main`, תיקייה: `/docs`, ואז Save. אחרי דקה-שתיים הקישור למעלה עובד.
 
+אם בחרתם בטעות `/ (root)` במקום `/docs`, זה גם עובד: `index.html` שבשורש המאגר מעביר אוטומטית ל-`docs/`.
+
 ## אחסון בשרת משלכם (לא חובה)
 
 הדומיין חייב להיות ב-https, אחרת הטלפון לא ישמור את המשחק לשימוש בלי אינטרנט.
